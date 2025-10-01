@@ -133,13 +133,13 @@ convert_fluxnet_to_netcdf <- function(
   
   #La Thuile or OzFlux
   if(conv_opts$datasetname %in% c("LaThuile", "OzFlux")){
-    
-    var_file     <- system.file("extdata", paste0("Output_variables_", conv_opts$datasetname, 
-                                               ".csv"), package="FluxnetLSM")
+    if(conv_opts$datasetname == "OzFlux") {
+      var_file     <- system.file("extdata", "Output_variables_NewFlux.csv", package="FluxnetLSM")
+    }
     
     #Fair use information for La Thuile
     if(conv_opts$datasetname == "LaThuile") {
-      
+      var_file     <- system.file("extdata", "Output_variables_LaThuile.csv", package="FluxnetLSM")
       fair_use_file          <- system.file("extdata","LaThuile_site_policy.csv", package="FluxnetLSM")
       fair_use_vec           <- read.csv(fair_use_file, header=TRUE, check.names=FALSE)
       conv_opts$fair_use_vec <- fair_use_vec[fair_use_vec$site==site_code,]

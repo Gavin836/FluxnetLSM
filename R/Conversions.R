@@ -41,7 +41,7 @@ ChangeUnits <- function(datain, varnames, site_log){
         
         
       ## CO2: different but equivalent units, do nothing
-      } else if(datain$vars[k] %in% varnames$co2 & flx_units[k]=="umolCO2/mol" & alma_units[k]=="ppm"){
+      } else if(datain$vars[k] %in% varnames$co2 & (flx_units[k]=="umolCO2/mol" || flx_units[k]=="umol/mol") & alma_units[k]=="ppm"){
         next
         
         
