@@ -335,7 +335,7 @@ get_varnames <- function(datasetname, flx2015_version, add_psurf) {
     ind <- 3
     
   } else if (datasetname=="OzFlux"){
-    #Ozflux appears to be using FLUXNET2015 format
+    #OzFlux appears to be using FLUXNET2015 format
     ind <- 1
   } else {
     #Else assume FLUXNET2015 fullset format, i.e. if (datasetname=="FLUXNET2015" & flx2015_version=="FULLSET")

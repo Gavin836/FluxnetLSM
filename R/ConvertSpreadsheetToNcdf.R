@@ -143,8 +143,7 @@ convert_fluxnet_to_netcdf <- function(
       fair_use_file          <- system.file("extdata","LaThuile_site_policy.csv", package="FluxnetLSM")
       fair_use_vec           <- read.csv(fair_use_file, header=TRUE, check.names=FALSE)
       conv_opts$fair_use_vec <- fair_use_vec[fair_use_vec$site==site_code,]
-      
-      }
+    }
 
   #Fluxnet2015
   } else {
