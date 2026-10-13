@@ -84,7 +84,7 @@ warn_and_log <- function(warn, site_log) {
 
 #' Appends warning message and calls warning
 append_and_warn <- function(warn, warnings, call=TRUE) {
-  if (nchar(warn) > 0) { 
+  if (nchar(warn) > 0) {
     
     if (nchar(warnings) > 0) {
       warnings <- paste(warnings, warn, sep=" ##### ")
@@ -354,6 +354,12 @@ get_varnames <- function(datasetname, flx2015_version, add_psurf) {
                       c("P_F"), 
                       c("Precip_f"),
                       c("Precip"))
+  ## For rainfall and snowfall. Used only with the fluxnetshuttle pipeline.
+  ## TODO: Determine difference between P and P_Rain
+  fallrate <- list(c("P_RAIN", "P_SNOW"),
+                      c(),
+                      c(),
+                      c())
   airpressure <- list(c("PA", "PA_ERA", "PA_F"), 
                       c("PA_F"), 
                       c(lt_psurf),
@@ -386,18 +392,24 @@ get_varnames <- function(datasetname, flx2015_version, add_psurf) {
                       c("WS_F"),
                       c("WS_f"),
                       c("Ws"))
+  ## soilm and soilt are used only with fluxnet datasets
+  soilm       <- list(c("SWC", "SWC_F_MDS", "SWC_F_MDS_1", "SWC_F_MDS_2"),
+                      c(),
+                      c(),
+                      c())
+
+  soilt       <- list(c("TS", "TS_F_MDS", "TS_F_MDS_1", "TS_F_MDS_2"),
+                      c(),
+                      c(),
+                      c())
   
   
   outs <- list(tair=tair[[ind]], precip=precip[[ind]], airpressure=airpressure[[ind]],
                co2=co2[[ind]], par=par[[ind]], swdown=swdown[[ind]], 
                relhumidity=relhumidity[[ind]],
+               fallrate=fallrate[[ind]],soilm=soilm[[ind]], soilt=soilt[[ind]],
                lwdown=lwdown[[ind]], vpd=vpd[[ind]], wind=wind[[ind]])
   
   return(outs)
   
 }
-
-
-
-
-

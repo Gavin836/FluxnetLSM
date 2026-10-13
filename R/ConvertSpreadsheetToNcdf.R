@@ -31,6 +31,9 @@
 #'        e.g. "FULLSET/FLX_AU-How_FLUXNET2015_FULLSET_HH_2001-2014_1-3.csv".
 #'        La Thuile data is expected to be in the format sitecode.year.xxxx.csv,
 #'        e.g. "AU-How.2001.synth.hourly.allvars.csv".
+#' @param meta_files When using the fluxnet-shuttle, the bif files may be passed through
+#'        e.g. [bif_var = "AMF_AR-Bal_FLUXNET_BIFVARINFO_HH_2012-2013_v1.3_r1.csv",
+#'              bif = "AMF_AR-Bal_FLUXNET_BIF_2012-2013_v1.3_r1.csv"]
 #' @param era_file ERA-Interim input file (needed if using ERAinterim to gapfill met variables)
 #'        e.g. "FULLSET/FLX_AU-How_FLUXNET2015_ERAI_HH_1989-2014_1-3.csv"
 #' @param out_path output path e.g. "./FLUXNET2016_processing/"
@@ -55,6 +58,7 @@ convert_fluxnet_to_netcdf <- function(
     out_path,
     conv_opts = get_default_conversion_options(),
     plot=c("annual", "diurnal", "timeseries"),
+    meta_files=NA,
     site_csv_file = system.file(
       "extdata",
       "Site_metadata.csv",
@@ -127,7 +131,7 @@ convert_fluxnet_to_netcdf <- function(
   #http://fluxnet.fluxdata.org/data/fluxnet2015-dataset/fullset-data-product/)
   #Separate file available for La Thuile synthesis as variable names differ 
   #(see http://fluxnet.fluxdata.org/data/la-thuile-dataset/)
-  
+
   #Find variable file path (not using data() command directly because reads a CSV with a
   #semicolon separator and this leads to incorrect table headers)
   
@@ -211,9 +215,9 @@ convert_fluxnet_to_netcdf <- function(
       }
   }
   
-  # Read site information (lon, lat, elevation)
+  ## Read site information (lon, lat, elevation, etc...)
   if (conv_opts$metadata_source == 'all') {
-      site_info <- get_site_metadata(site_code, model=conv_opts$model)
+      site_info <- get_site_metadata(site_code, meta_files=meta_files, model=conv_opts$model)
   } else if (conv_opts$metadata_source == 'csv') {
       site_info <- get_site_metadata_from_CSV(
         site_code,

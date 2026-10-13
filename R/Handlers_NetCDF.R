@@ -177,7 +177,46 @@ CreateFluxNetcdfFile = function(
     if(!is.na(siteInfo$TowerStatus)) { 
       ncdf4::ncatt_put(ncid,varid=0,attname='tower_status',
                 attval=as.character(siteInfo$TowerStatus), prec="text") }
-    
+    if(!is.na(siteInfo$Vegetation_height)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='vegetation_height',
+                attval=as.character(siteInfo$Vegetation_height), prec="text") }
+    if(!is.na(siteInfo$Source)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='source',
+                attval=as.character(siteInfo$Source), prec="text") }
+    if(!is.na(siteInfo$Reference)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='reference',
+                attval=as.character(siteInfo$Reference), prec="text") }
+    if(!is.na(siteInfo$ACKNOWLEDGEMENT)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='ACKNOWLEDGEMENT',
+                attval=as.character(siteInfo$ACKNOWLEDGEMENT), prec="text") }
+    if(!is.na(siteInfo$MAT)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='MAT',
+                attval=as.character(siteInfo$MAT), prec="text") }
+    if(!is.na(siteInfo$MAP)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='MAP',
+                attval=as.character(siteInfo$MAP), prec="text") }
+    if(!is.na(siteInfo$CLIMATE_KOEPPEN)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='CLIMATE_KOEPPEN',
+                attval=as.character(siteInfo$CLIMATE_KOEPPEN), prec="text") }
+    if(!is.na(siteInfo$DOI)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI',
+                attval=as.character(siteInfo$DOI), prec="text") }
+    if(!is.na(siteInfo$DOI_CITATION)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CITATION',
+                attval=as.character(siteInfo$DOI_CITATION), prec="text") }
+    if(!is.na(siteInfo$DOI_CONTRIBUTOR_NAME)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CONTRIBUTION_NAME',
+                attval=as.character(siteInfo$DOI_CONTRIBUTOR_NAME), prec="text") }
+    if(!is.na(siteInfo$DOI_CONTRIBUTOR_EMAIL)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CONTRIBUTION_EMAIL',
+                attval=as.character(siteInfo$DOI_CONTRIBUTOR_EMAIL), prec="text") }
+    if(!is.na(siteInfo$DOI_CONTRIBUTOR_INSTITUTION)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CONTRIBUTION_INSTITUTION',
+                attval=as.character(siteInfo$DOI_CONTRIBUTOR_INSTITUTION), prec="text") }
+    if(!is.na(siteInfo$UTC_OFFSET)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='UTC_OFFSET',
+                attval=siteInfo$UTC_OFFSET, prec="text") }
+
     #Qc flag descriptions
     ncdf4::ncatt_put(ncid,varid=0,attname='QC_flag_descriptions',
               attval=qcInfo, prec="text")
@@ -510,7 +549,45 @@ CreateMetNetcdfFile <- function(
     if(!is.na(siteInfo$TowerStatus)) { 
       ncdf4::ncatt_put(ncid,varid=0,attname='tower_status',
                 attval=as.character(siteInfo$TowerStatus), prec="text") }
-    
+    if(!is.na(siteInfo$Vegetation_height)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='vegetation_height',
+                attval=as.character(siteInfo$Vegetation_height), prec="text") }
+    if(!is.na(siteInfo$Source)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='source',
+                attval=as.character(siteInfo$Source), prec="text") }
+    if(!is.na(siteInfo$Reference)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='reference',
+                attval=as.character(siteInfo$Reference), prec="text") }
+    if(!is.na(siteInfo$ACKNOWLEDGEMENT)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='ACKNOWLEDGEMENT',
+                attval=as.character(siteInfo$ACKNOWLEDGEMENT), prec="text") }
+    if(!is.na(siteInfo$MAT)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='MAT',
+                attval=as.character(siteInfo$MAT), prec="text") }
+    if(!is.na(siteInfo$MAP)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='MAP',
+                attval=as.character(siteInfo$MAP), prec="text") }
+    if(!is.na(siteInfo$CLIMATE_KOEPPEN)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='CLIMATE_KOEPPEN',
+                attval=as.character(siteInfo$CLIMATE_KOEPPEN), prec="text") }
+    if(!is.na(siteInfo$DOI)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI',
+                attval=as.character(siteInfo$DOI), prec="text") }
+    if(!is.na(siteInfo$DOI_CITATION)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CITATION',
+                attval=as.character(siteInfo$DOI_CITATION), prec="text") }
+    if(!is.na(siteInfo$DOI_CONTRIBUTOR_NAME)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CONTRIBUTION_NAME',
+                attval=as.character(siteInfo$DOI_CONTRIBUTOR_NAME), prec="text") }
+    if(!is.na(siteInfo$DOI_CONTRIBUTOR_EMAIL)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CONTRIBUTION_EMAIL',
+                attval=as.character(siteInfo$DOI_CONTRIBUTOR_EMAIL), prec="text") }
+    if(!is.na(siteInfo$DOI_CONTRIBUTOR_INSTITUTION)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='DOI_CONTRIBUTION_INSTITUTION',
+                attval=as.character(siteInfo$DOI_CONTRIBUTOR_INSTITUTION), prec="text") }
+    if(!is.na(siteInfo$UTC_OFFSET)) {
+      ncdf4::ncatt_put(ncid,varid=0,attname='UTC_OFFSET',
+                attval=siteInfo$UTC_OFFSET, prec="text") }
     #Qc flag descriptions
     ncdf4::ncatt_put(ncid,varid=0,attname='QC_flag_descriptions',
               attval=qcInfo, prec="text")

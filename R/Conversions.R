@@ -48,7 +48,10 @@ ChangeUnits <- function(datain, varnames, site_log){
       ## Rainfall (mm/timestep to mm/s)
       } else if(datain$vars[k] %in% varnames$precip & flx_units[k]=="mm" & alma_units[k]=="kg/m2/s"){
         datain$data[[k]] <- datain$data[[k]] / tstep
-        
+
+      ## Rainfall and Snowfall (mm/timestep to mm/s)
+      } else if(datain$vars[k] %in% varnames$fallrate & flx_units[k]=="mm" & alma_units[k]=="mm/s"){
+        datain$data[[k]] <- datain$data[[k]] / tstep
         
       ## Air pressure (kPa to Pa) (Not in La Thuile dataset)
       } else if(datain$vars[k] %in% varnames$airpressure & flx_units[k]=="kPa" & alma_units[k]=="Pa"){  
@@ -344,8 +347,3 @@ celsius_to_kelvin <- function(data){
   data <- data + 273.15
   return(data)
 }
-
-
-
-
-

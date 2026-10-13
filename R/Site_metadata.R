@@ -25,15 +25,28 @@ site_metadata_template <- function(site_code) {
         Exclude = FALSE,
         Exclude_reason = NA,
         Description = NA,
-        TowerStatus = NA,	
-        Country = NA,	
-        MeasurementHeight = NA,	
-        VegetationDescription = NA,	
-        SoilType = NA,	
-        Disturbance = NA,	
-        CropDescription = NA,	
-        Irrigation = NA        
-        
+        TowerStatus = NA,
+        Country = NA,
+        MeasurementHeight = NA,
+        VegetationDescription = NA,
+        SoilType = NA,
+        Disturbance = NA,
+        CropDescription = NA,
+        Irrigation = NA,
+        ## New bif variables
+        Vegetation_height = NA,
+        Source = NA,
+        Reference = NA,
+        ACKNOWLEDGEMENT = NA,
+        MAT = NA,
+        MAP = NA,
+        CLIMATE_KOEPPEN = NA,
+        DOI = NA,
+        DOI_CITATION = NA,
+        DOI_CONTRIBUTOR_NAME = NA,
+        DOI_CONTRIBUTOR_EMAIL = NA,
+        DOI_CONTRIBUTOR_INSTITUTION = NA,
+        UTC_OFFSET = NA
     )
 
     return(metadata)
@@ -92,6 +105,7 @@ add_processing_metadata <- function(metadata) {
 #' Updates old metadata with new metadata, ignoring NAs, and warning on differences
 #'
 #' @return metadata list
+#' @export
 update_metadata <- function(metadata, new_metadata, overwrite=TRUE) {
     for (n in names(new_metadata)) {
         if (!is.na(new_metadata[[n]])) {  # Don't overwrite with empty data
@@ -124,14 +138,12 @@ update_metadata <- function(metadata, new_metadata, overwrite=TRUE) {
             } else {  # old data is empty, or doesn't exist
                 metadata[n] <- new_metadata[n]
             }
-          
-      #Metadata value is missing but the field doesn't exist in metadata, 
-      #save as is to avoid losing metadata field
-      } else if (is.na(new_metadata[[n]]) & !(n %in% names(metadata))){
-        metadata[n] <- new_metadata[n]
-        
-      }
-    
+
+        ## Metadata value is missing but the field doesn't exist in metadata,
+        ## save as is to avoid losing metadata field
+        } else if (is.na(new_metadata[[n]]) & !(n %in% names(metadata))){
+            metadata[n] <- new_metadata[n]
+        }
     }
 
     return(metadata)
@@ -148,7 +160,7 @@ update_metadata <- function(metadata, new_metadata, overwrite=TRUE) {
 #'
 #' @return metadata list
 #' @export
- 
+
 get_site_metadata_from_CSV <- function(
     metadata = NA,
     incl_processing = TRUE,
@@ -183,11 +195,11 @@ get_site_metadata_from_CSV <- function(
     if (site_code %in% csv_data$SiteCode) {
         csv_row <- as.list(csv_data[csv_data$SiteCode == site_code, ])
         metadata = update_metadata(metadata, csv_row)
-       
-    #Didn't find it (stop if trying to pass model parameters) 
+
+    #Didn't find it (stop if trying to pass model parameters)
     } else {
         message("    ", site_code, " not found in csv_data file")
-      
+
         if(!is.na(model)) stop("Cannot read model parameters, site not found in CSV metadata file. ",
                              "Please amend CSV file or set model=NA")
     }
@@ -551,7 +563,7 @@ check_missing <- function(metadata) {
     key_data = c("SiteCode", "Fullname",
                  "SiteLatitude", "SiteLongitude", "SiteElevation",
                  "IGBP_vegetation_short", "IGBP_vegetation_long",
-                 "TowerHeight", "CanopyHeight", "Tier")
+                 "TowerHeight", "CanopyHeight", "Tier", "MeasurementHeight")
 
     missing_data <- is.na(metadata[key_data])
 
@@ -569,6 +581,481 @@ warn_missing_metadata <- function(metadata) {
     }
 }
 
+###-----------------------------------------------------------------------------
+### FLUXNET_SHUTTLE BIF PROCESSING FUNCTIONS
+###-----------------------------------------------------------------------------
+
+## Take the highest relevant sensor
+calc_instrument_height <- function(bifvarinfo) {
+    target_variables <- c("VPD_F", "RH")
+
+    groups_to_keep <- unique(
+        bifvarinfo$GROUP_ID[
+                       bifvarinfo$VARIABLE == "VAR_INFO_VARNAME" &
+                       bifvarinfo$DATAVALUE %in% target_variables
+                   ]
+    )
+
+    filtered <- bifvarinfo[bifvarinfo$GROUP_ID%in% groups_to_keep, ]
+
+    height_values <- with(
+        filtered,
+        DATAVALUE[VARIABLE == "VAR_INFO_HEIGHT"]
+    )
+
+    if (length(height_values) == 0L || all(is.na(height_values))) {
+        NA_real_
+    } else {
+        as.numeric(max(height_values, na.rm = TRUE))
+    }
+}
+
+## Adaptor to convert ameriflux sites into standard metadata object
+## parmams: bif and bifvarinfo are dataframes
+## returns: list(site, warning)
+parse_ameriflux <- function(bif, bifvarinfo, site_code) {
+    if (nrow(bif) == 0L || nrow(bifvarinfo) == 0L) {
+        return(list(site = uest(), variables = list(), warnings =
+                                                           paste("Empty bif metadata for", site_code)))
+    }
+
+    ## Check first entry since they all should be the same
+    if (bif$SITE_ID[1] != site_code) {
+        return(list(site = list(), variables = list(), warnings =
+                                                           paste("Site code doesn't match", site_code)))
+    }
+
+    warnings <- character()
+    ## lookup variable to attempt to source particular variables
+    ## docs.google.com/spreadsheets/d/167CMz_39hEUZziO66yhfe5-4wabqlqUGpB19aeDp8yA
+    bif_lookup <- setNames(as.character(bif$DATAVALUE), bif$VARIABLE)
+    get_bif <- function(variable, default = NA_character_) {
+        missing_variable <- (
+            length(variable) != 1L ||
+            is.na(variable) ||
+            !(variable %in% names(bif_lookup))
+        )
+
+        if (missing_variable) {
+            warnings <<- append_and_warn()
+            warnings <<- append(
+                warnings,
+                list(sprintf("Variable '%s' was not found; using default",
+                            variable))
+            )
+            return(default)
+        }
+
+        value <- bif_lookup[[variable]]
+
+        if (is.na(value)) {
+            warnings <<- append(
+                warnings,
+                list(sprintf("Variable '%s' has an NA value; using default",
+                            variable))
+            )
+            return(default)
+        }
+
+        value
+    }
+
+    ## Canopy/vegetation height is not always present. There may be multiple values
+    ## (for different species). We will take the maximum value as the canopy height
+    heightc <- unlist(
+        bif_lookup[names(bif_lookup) == "HEIGHTC"],
+        use.names = FALSE
+    )
+    max_heightc <- if (length(heightc) == 0L || all(is.na(heightc))) {
+                       NA_real_
+                   } else {
+                       max(heightc, na.rm = TRUE)
+                   }
+
+    if (is.na(max_heightc)) {
+        warnings <- append(
+            warnings,
+            list("Variable 'HEIGHTC' was not found; using default")
+        )
+    }
+
+    height <- calc_instrument_height(bifvarinfo)
+
+    if (is.na(height)) {
+        warnings <- append(
+            warnings,
+            list("Variable 'VAR_INFO_HEIGHT' was not found for either 'VPD_F' or 'RH'; using default")
+        )
+    }
+
+    list(
+        site = list(
+            Fullname = get_bif("SITE_NAME"),
+            SiteLatitude = as.numeric(get_bif("LOCATION_LAT")),
+            SiteLongitude = as.numeric(get_bif("LOCATION_LONG")),
+            SiteElevation = as.numeric(get_bif("LOCATION_ELEV")),
+
+            IGBP_vegetation_short = get_bif("IGBP"),
+            IGBP_vegetation_long = get_bif("IGBP_COMMENT"),
+            VegetationDescription = get_bif("IGBP_COMMENT"),
+            CanopyHeight = max_heightc,
+            Vegetation_height = max_heightc,
+
+            Description = get_bif("SITE_DESC"),
+            Disturbance = get_bif("DOM_DIST_MGMT"),
+            CropDescription = get_bif("SITE_DESC"),
+
+            Country = get_bif("COUNTRY"),
+            MeasurementHeight = height,
+
+            Source = get_bif("NETWORK"),
+            Reference = get_bif("DOI_CITATION"),
+            ACKNOWLEDGEMENT = get_bif("ACKNOWLEDGEMENT"),
+
+            MAT = as.numeric(get_bif("MAT")),
+            MAP = as.numeric(get_bif("MAP")),
+            CLIMATE_KOEPPEN = get_bif("CLIMATE_KOEPPEN"),
+
+            DOI = NA_character_, # can't find an example in the csv
+            DOI_CONTRIBUTOR_NAME = get_bif("TEAM_MEMBER_NAME"),
+            DOI_CONTRIBUTOR_EMAIL = get_bif("TEAM_MEMBER_EMAIL"),
+            DOI_CONTRIBUTOR_INSTITUTION = get_bif("TEAM_MEMBER_INSTITUTION"),
+
+            UTC_OFFSET = get_bif("UTC_OFFSET")
+        ),
+        warnings = warnings
+    )
+}
+
+## Adaptor to convert TERN sites into standard metadata object
+## parmams: bif and bifvarinfo are dataframes
+## returns: list(site, warning)
+parse_tern <- function(bif, bifvarinfo, site_code) {
+    if (nrow(bif) == 0L || nrow(bifvarinfo) == 0L) {
+        return(list(site = uest(), variables = list(), warnings =
+                                                           paste("Empty bif metadata for", site_code)))
+    }
+
+    ## Check first entry since all rows have the same site ID
+    if (bif$SITE_ID[1] != site_code) {
+        return(list(site = list(), variables = list(), warnings =
+                                                           paste("Site code doesn't match", site_code)))
+    }
+
+    issues <- list(
+        invalid_key = character(),
+        key_with_na = character()
+    )
+
+    ## Lookup variable to attempt to source particular variables
+    ## docs.google.com/spreadsheets/d/167CMz_39hEUZziO66yhfe5-4wabqlqUGpB19aeDp8yA
+    bif_lookup <- setNames(as.character(bif$DATAVALUE), bif$VARIABLE)
+    get_bif <- function(variable, default = NA_character_) {
+        is_missing <- (
+            length(variable) != 1L ||
+            is.na(variable) ||
+            !(variable %in% names(bif_lookup))
+        )
+
+        if (is_missing) {
+            issues$invalid_key <<- c(issues$invalid_key, variable)
+            return(default)
+        }
+
+        value <- bif_lookup[[variable]]
+
+        if (is.na(value)) {
+            issues$key_with_na <<- c(issues$key_with_na, variable)
+            return(default)
+        }
+
+        value
+    }
+
+    ## TERN network contains only Australia or New Zealand sites
+    country <- ifelse(
+        grepl("^TERN_AU-", get_bif("PRODUCT_NAME")),
+        "Australia",
+               ifelse(
+                   grepl("^TERN_NZ-", get_bif("PRODUCT_NAME")),
+                   "New Zealand",
+                   NA_character_
+               )
+    )
+
+    ## Canopy/vegetation height is not always present. There may be multiple values
+    ## (for different species). We will take the maximum value as the canopy height
+    heightc <- unlist(
+        bif_lookup[names(bif_lookup) == "HEIGHTC"],
+        use.names = FALSE
+    )
+    max_heightc <- if (length(heightc) == 0L || all(is.na(heightc))) {
+                       NA_real_
+                   } else {
+                       as.numeric(max(heightc, na.rm = TRUE))
+                   }
+
+    if (is.na(max_heightc)) {
+        warnings <- append(
+            warnings,
+            list("Variable 'HEIGHTC' was not found; using default")
+        )
+    }
+
+    height <- calc_instrument_height(bifvarinfo)
+
+    if (is.na(height)) {
+        warnings <- append(
+            warnings,
+            list("Variable 'VAR_INFO_HEIGHT' was not found for either 'VPD_F' or 'RH'; using default")
+        )
+    }
+
+    list(
+        site = list(
+            Fullname = get_bif("SITE_NAME"),
+            SiteLatitude = as.numeric(get_bif("LOCATION_LAT")),
+            SiteLongitude = as.numeric(get_bif("LOCATION_LONG")),
+            SiteElevation = as.numeric(get_bif("LOCATION_ELEV")),
+
+            IGBP_vegetation_short = get_bif("IGBP"),
+            IGBP_vegetation_long = get_bif("IGBP_COMMENT"),
+            VegetationDescription = get_bif("IGBP_COMMENT"),
+            CanopyHeight = max_heightc,
+            Vegetation_height = max_heightc,
+
+            Description = get_bif("SITE_DESC"),
+            Disturbance = get_bif("DOM_DIST_MGMT"),
+            CropDescription = get_bif("SITE_DESC"),
+
+            Country = country,
+            MeasurementHeight = height,
+
+            Source = "TERN",
+            Reference = get_bif("DOI_CITATION"),
+            ACKNOWLEDGEMENT = get_bif("ACKNOWLEDGEMENT"),
+
+            MAT = as.numeric(get_bif("MAT")),
+            MAP = as.numeric(get_bif("MAP")),
+            CLIMATE_KOEPPEN = get_bif("CLIMATE_KOEPPEN"),
+
+
+            DOI_CONTRIBUTOR_NAME = get_bif("TEAM_MEMBER_NAME"),
+            DOI_CONTRIBUTOR_EMAIL = get_bif("TEAM_MEMBER_EMAIL"),
+            DOI_CONTRIBUTOR_INSTITUTION = get_bif("TEAM_MEMBER_INSTITUTION"),
+
+            UTC_OFFSET = get_bif("UTC_OFFSET")
+        ),
+        warnings = warnings
+    )
+}
+
+## Adaptor to convert ICOS sites into standard metadata object
+## parmams: bif and bifvarinfo are dataframes
+## returns: list(site, warning)
+parse_icos <- function(bif, bifvarinfo, site_code) {
+    if (nrow(bif) == 0L || nrow(bifvarinfo) == 0L) {
+        return(list(site = uest(), variables = list(), warnings =
+                                                           paste("Empty bif metadata for", site_code)))
+    }
+
+    ## Check first entry since all rows have the same site ID
+    if (bif$SITE_ID[1] != site_code)    {
+        return(list(site = list(), variables = list(), warnings =
+                                                           paste("Site code doesn't match", site_code)))
+    }
+
+    warnings <- character()
+    ## Lookup variable to attempt to source particular variables
+    ## docs.google.com/spreadsheets/d/167CMz_39hEUZziO66yhfe5-4wabqlqUGpB19aeDp8yA
+    bif_lookup <- setNames(as.character(bif$DATAVALUE), bif$VARIABLE)
+    get_bif <- function(variable, default = NA_character_) {
+        missing_variable <- (
+            length(variable) != 1L ||
+            is.na(variable) ||
+            !(variable %in% names(bif_lookup))
+        )
+
+        if (missing_variable) {
+            warnings <<- append(
+                warnings,
+                list(sprintf("Variable '%s' was not found; using default",
+                            variable))
+            )
+            return(default)
+        }
+
+        value <- bif_lookup[[variable]]
+
+        if (is.na(value)) {
+            warnings <<- append(
+                warnings,
+                list(sprintf("Variable '%s' has an NA value; using default",
+                            variable))
+            )
+            return(default)
+        }
+
+        value
+    }
+
+    ## Canopy/vegetation height is not always present. There may be multiple values
+    ## (for different species). We will take the maximum value as the canopy height
+    heightc <- unlist(
+        bif_lookup[names(bif_lookup) == "HEIGHTC"],
+        use.names = FALSE
+    )
+    max_heightc <- if (length(heightc) == 0L || all(is.na(heightc))) {
+                       NA_real_
+                   } else {
+                       max(heightc, na.rm = TRUE)
+                   }
+
+    if (is.na(max_heightc)) {
+        warnings <- append(
+            warnings,
+            list("Variable 'HEIGHTC' was not found; using default")
+        )
+    }
+
+    height <- calc_instrument_height(bifvarinfo)
+
+    if (is.na(height)) {
+        warnings <- append(
+            warnings,
+            list("Variable 'VAR_INFO_HEIGHT' was not found for either 'VPD_F' or 'RH'; using default")
+        )
+    }
+
+    list(
+        site = list(
+            Fullname = get_bif("SITE_NAME"),
+            SiteLatitude = as.numeric(get_bif("LOCATION_LAT")),
+            SiteLongitude = as.numeric(get_bif("LOCATION_LONG")),
+            SiteElevation = as.numeric(get_bif("LOCATION_ELEV")),
+
+            IGBP_vegetation_short = get_bif("IGBP"),
+            IGBP_vegetation_long = get_bif("IGBP_COMMENT"),
+            VegetationDescription = get_bif("IGBP_COMMENT"),
+            CanopyHeight = max_heightc,
+            Vegetation_height = max_heightc,
+
+            Description = get_bif("SITE_DESC"),
+            Disturbance = get_bif("DOM_DIST_MGMT"),
+            CropDescription = get_bif("SITE_DESC"),
+
+            Country = get_bif("COUNTRY"), # SAEON doesn't have
+
+            MeasurementHeight = height,
+
+            Source = get_bif("NETWORK"),
+            Reference = get_bif("DOI_CITATION"),
+            ACKNOWLEDGEMENT = get_bif("ACKNOWLEDGEMENT"),
+
+            MAT = as.numeric(get_bif("MAT")),
+            MAP = as.numeric(get_bif("MAP")),
+            CLIMATE_KOEPPEN = get_bif("CLIMATE_KOEPPEN"),
+
+            DOI_CONTRIBUTOR_NAME = get_bif("TEAM_MEMBER_NAME"),
+            DOI_CONTRIBUTOR_EMAIL = get_bif("TEAM_MEMBER_EMAIL"),
+            DOI_CONTRIBUTOR_INSTITUTION = get_bif("TEAM_MEMBER_INSTITUTION"),
+
+            UTC_OFFSET = get_bif("UTC_OFFSET")
+        ),
+        warnings = warnings
+    )
+}
+
+read_fluxnet_csv <- function(path) {
+    if (length(path) != 1L || is.na(path) || !file.exists(path)) {
+        return(NULL)
+    }
+
+    read.csv(
+        path,
+        header = TRUE,
+        stringsAsFactors = FALSE,
+        na.strings = c("", "NA", "N/A", "None", "-9999", "-9999.0")
+    )
+}
+
+## From the bifvarinfo file, determine the datahub source - TERN, ICOS, AMF
+detect_bif_hub <- function(bif, bifvarinfo) {
+    processing_center <- bifvarinfo[
+        toupper(trimws(as.character(bifvarinfo$VARIABLE))) ==
+            "PRODUCT_PROCESSING_CENTER",
+        "DATAVALUE"
+    ]
+
+    hub_map <- c(
+        TERN = "TERN",
+        EUDB_ICOS = "ICOS",
+        AMP = "AMF"
+    )
+
+    unname(hub_map[processing_center])
+}
+
+## datahub registry to support different formats
+datahub_adapters <- list(
+    AMF = parse_ameriflux,
+    TERN = parse_tern,
+    ICOS = parse_icos
+    )
+
+## Main entry function to extract metadata from bif files. Delegate processing to specific adaptor
+get_site_metadata_bif <- function(site_code, meta_files, incl_processing = TRUE, bif_hub = NULL) {
+    required <- c("bif", "bifvarinfo")
+    if (is.list(meta_files) &&
+        !all(required %in% names(meta_files))) {
+        stop(
+            "`meta_files` must be a named list containing: ",
+            paste(required, collapse = ", ")
+        )
+    }
+
+    bif <- read_fluxnet_csv(meta_files$bif)
+    bifvarinfo <- read_fluxnet_csv(meta_files$bifvarinfo)
+
+    if (is.null(bif) || is.null(bifvarinfo)) {
+        return(list(
+            out = character(),
+            warn= "meta data files do not exist"
+        ))
+    }
+
+    if (is.null(bif_hub)) {
+        bif_hub <- detect_bif_hub(bif, bifvarinfo)
+    }
+
+    adapter <- datahub_adapters[[bif_hub]]
+
+    if (is.null(adapter)) {
+        stop("Unsupported BIF data hub in datahub adapters: ", bif_hub)
+    }
+
+    result <- adapter(
+        bif = bif,
+        bifvarinfo = bifvarinfo,
+        site_code = site_code
+    )
+
+    result$source <- list(
+        hub = bif_hub,
+        bif = meta_files$bif,
+        bifvarinfo = meta_files$bifvarinfo
+    )
+
+    if (incl_processing) {
+        warnings <- ""
+        ## for (error in result$warnings) {
+        ##     warnings <- append_and_warn(error, warnings, call = FALSE)
+        ## }
+        return(list(out=result$site,warn=warnings))
+    } else {
+        return(result$site)
+    }
+}
 
 ################################################
 # Main metadata functions
@@ -578,8 +1065,14 @@ warn_missing_metadata <- function(metadata) {
 #'
 #' @return metadata list
 #' @export
-get_site_metadata <- function(site_code, incl_processing=TRUE,
-                              use_csv=TRUE, update_csv=FALSE, ...) {
+get_site_metadata <- function(
+    site_code,
+    meta_files = NA,
+    incl_processing=TRUE,
+    use_csv=TRUE,
+    update_csv=FALSE,
+    ...
+) {
     #Initialise warnings
     warnings <- ""
 
@@ -589,9 +1082,21 @@ get_site_metadata <- function(site_code, incl_processing=TRUE,
         metadata <- get_site_metadata_from_CSV(metadata, incl_processing=FALSE, ...)
     }
 
-    if (any(check_missing(metadata))) {
-        metadata <- get_site_metadata_web(metadata, incl_processing=FALSE)
+    if (any(!is.na(meta_files))) {
+        ## named list with $out (site meta) and $warn (list of warnings)
+        result <- get_site_metadata_bif(
+            site_code = site_code,
+            meta_files = meta_files,
+        )
+
+        metadata <- update_metadata(metadata, result$out)
+        warnings <- result$warn
     }
+
+    ## Commented-out as all web sources are currently out of date
+    ## if (any(check_missing(metadata))) {
+    ##     metadata <- get_site_metadata_web(metadata, incl_processing=FALSE)
+    ## }
 
     warn_missing_metadata(metadata)
 
