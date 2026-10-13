@@ -125,12 +125,66 @@ CreateFluxNetcdfFile = function(
         opt_vars[[ctr]] = long_veg
         ctr <- ctr + 1
     }
-    
+
+
+    # EXCEPTION VARIABLES ##############################################
+    ## Soil moisture will have 2 difference dimensions (1,1,1) vs (1,1,2)
+    ## depending on where there exists a secondary observation per timestep
+    ## Determine from var_defs which is the case and write the dimensions
+    ## and values appropriately
+    soil_moist_entry <- find_soil_variables(varnames$soilm, td$len, datain)
+    soil_temp_entry <- find_soil_variables(varnames$soilt, td$len, datain)
+
+    moist_len <- length(soil_moist_entry$vars)
+    temp_len <- length(soil_temp_entry$vars)
+
+    soil_vars = c()
+    ## Create appropriate netcdf dim and vars for soil vars
+    if (moist_len > 0 | temp_len > 0) {
+        soil_dim <- ncdf4::ncdim_def(
+                               name = "soil",
+                               vals = seq_len(moist_len),
+                               units = ""
+                           )
+
+        if (moist_len > 0) {
+            soil_idx <- which(datain$vars %in% soil_moist_entry$vars)
+            idx <- soil_idx[1]
+            soilm_var <- ncdf4::ncvar_def(name=datain$out_vars[idx],
+                                         units=datain$units$target_units[idx],
+                                         dim=list(xd,yd,soil_dim,td),
+                                         missval=Nc_MissingVal,
+                                         longname=datain$attributes[idx,2])
+            soil_vars[['moist']] <- soilm_var
+        }
+
+        if (temp_len > 0) {
+            soil_idx <- which(datain$vars %in% soil_temp_entry$vars)
+            idx <- soil_idx[1]
+            soilt_var <- ncdf4::ncvar_def(name=datain$out_vars[idx],
+                                         units=datain$units$target_units[idx],
+                                         dim=list(xd,yd,soil_dim,td),
+                                         missval=Nc_MissingVal,
+                                         longname=datain$attributes[idx,2])
+            soil_vars[['temp']] <- soilt_var
+        }
+    }
+
+    ## Calculate surface radiative temperature if LWup exists
+    radT_val <- calculate_radT(datain)
+    if (any(!is.na(radT_val))) {
+        radT_var <- ncdf4::ncvar_def(name="RadT",
+                                     units="K",
+                                     dim=list(xd,yd,td),
+                                     missval=Nc_MissingVal,
+                                     longname="Surface radiative temperature")
+        soil_vars[['radT']] <- radT_var
+    }
 
     # END VARIABLE DEFINITIONS #########################################
 
     # Collate variables
-    all_vars <- append(var_defs, c(list(latdim), list(londim)))
+    all_vars <- append(var_defs, c(list(latdim), list(londim), soil_vars))
 
     if(length(opt_vars)>0) { all_vars <- append(all_vars, opt_vars) }
     if(any(!is.na(modelInfo)))  { all_vars <- append(all_vars, model_defs$nc_vars) }
@@ -271,7 +325,13 @@ CreateFluxNetcdfFile = function(
     lapply(1:length(var_defs), function(x) ncdf4::ncvar_put(nc=ncid,
                                                      varid=var_defs[[x]],
                                                      vals=datain$data[,var_ind[x]]))
-
+    ## Manually add soil measurements
+    if(any(!is.na(soil_moist_entry$val))) {
+      ncdf4::ncvar_put(ncid, varid = soil_vars[['moist']], vals = soil_moist_entry$val)}
+    if(any(!is.na(soil_temp_entry$val))) {
+      ncdf4::ncvar_put(ncid, varid = soil_vars[['temp']], vals = soil_temp_entry$val)}
+    if(any(!is.na(radT_val))) {
+      ncdf4::ncvar_put(ncid, varid = soil_vars[['radT']], vals = radT_val)}
 
     # Add original Fluxnet variable name to file
     lapply(1:length(var_defs), function(x) ncdf4::ncatt_put(nc=ncid, varid=var_defs[[x]],
@@ -588,6 +648,7 @@ CreateMetNetcdfFile <- function(
     if(!is.na(siteInfo$UTC_OFFSET)) {
       ncdf4::ncatt_put(ncid,varid=0,attname='UTC_OFFSET',
                 attval=siteInfo$UTC_OFFSET, prec="text") }
+
     #Qc flag descriptions
     ncdf4::ncatt_put(ncid,varid=0,attname='QC_flag_descriptions',
               attval=qcInfo, prec="text")
@@ -858,4 +919,67 @@ add_processing_info <- function(ncid, arg_info, datain, cat){
     }
 
 
+}
+
+
+#' Used internally in the create flux file. Soils observations may have 1/2 readings
+#'
+#' @param target_vars vector of soil variable names
+#' @param time_len timestamp size of array
+#' @param datain list of the fluxnet input file
+#' @return
+#' @export
+#'
+find_soil_variables <- function(target_vars, time_len, datain) {
+    available_soil_vars <- intersect(target_vars, datain$vars)
+    n_soil <- length(available_soil_vars)
+
+    if (n_soil > 0) {
+        empty_vars <- c()
+        for (var in available_soil_vars) {
+            idx <- which(datain$vars == var)
+            data_col <- datain$data[,idx]
+
+            if (all(is.na(data_col))) {
+                empty_vars <- append(empty_vars, var)
+            }
+        }
+
+        ## if column is empty ignore variable
+        available_soil_vars <- setdiff(available_soil_vars, empty_vars)
+        n_soil <- length(available_soil_vars)
+
+        if (n_soil == 0) {
+            return(list())
+        }
+
+        soil_vals <- array(
+            Nc_MissingVal,
+            dim = c(1, 1, n_soil, time_len)
+        )
+
+        count <- 1
+        for (var in available_soil_vars) {
+            soil_idx <- which(datain$vars %in% var)
+            idx <- soil_idx[1]
+            soil_vals[1,1, count,] <- datain$data[,idx]
+            count <- count + 1
+        }
+
+        list(vars = available_soil_vars, val = soil_vals)
+    }
+}
+
+calculate_radT <- function(datain) {
+    sigma <- 5.670374419e-8 # Boltzmann constant
+    emissivity <- 0.978 # Surface emissivity
+    stefan_boltzmann_eq <- function(lw) { (lw / (emissivity * sigma))^(1 / 4) }
+
+    ## Determine whether the requisite LW_OUT exists
+    idx <- which(datain$vars == 'LW_OUT')
+    if (length(idx) == 1) {
+        lws <- datain$data[,idx]
+
+        return(stefan_boltzmann_eq(lws))
+    }
 }
