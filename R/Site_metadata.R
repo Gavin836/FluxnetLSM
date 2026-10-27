@@ -637,7 +637,6 @@ parse_ameriflux <- function(bif, bifvarinfo, site_code) {
         )
 
         if (missing_variable) {
-            warnings <<- append_and_warn()
             warnings <<- append(
                 warnings,
                 list(sprintf("Variable '%s' was not found; using default",
