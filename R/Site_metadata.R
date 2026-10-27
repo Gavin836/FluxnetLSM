@@ -585,6 +585,24 @@ warn_missing_metadata <- function(metadata) {
 ### FLUXNET_SHUTTLE BIF PROCESSING FUNCTIONS
 ###-----------------------------------------------------------------------------
 
+## Return a formated string of the heights of variable sensors. Expected up to 6 vals.
+## The string values preserves order in 'vars'
+instrument_height_string <- function(csv, vars) {
+    target_group <- csv$GROUP_ID[csv$DATAVALUE %in% vars]
+    instrument_heights <- csv$DATAVALUE[
+                                 csv$GROUP_ID %in% target_group &
+                                 csv$VARIABLE == 'VAR_INFO_HEIGHT'
+                             ]
+
+    format_str <- c()
+    if (length(instrument_heights) != 0) {
+        format_str <- paste(instrument_heights, collapse = ',')
+    }
+
+    return (format_str)
+}
+
+
 ## Take the highest relevant sensor
 calc_instrument_height <- function(bifvarinfo) {
     target_variables <- c("VPD_F", "RH")
@@ -659,6 +677,17 @@ parse_ameriflux <- function(bif, bifvarinfo, site_code) {
         value
     }
 
+    ## Soil temp may exist independently of soil moisture. Assume bifvarinfo
+    ## only available with the FLUXNET2015 FULLSET datasets
+    dataset_vars <- get_varnames('FLUXNET2015', 'FULLSET', FALSE)
+    soilt <- dataset_vars$soilt
+
+    soil_heights <- instrument_height_string(bifvarinfo, soilt)
+    if (length(soil_heights) == 0) {
+        soilm <- dataset_vars$soilm
+        soil_heights <- instrument_height_string(bifvarinfo, soilm)
+    }
+
     ## Canopy/vegetation height is not always present. There may be multiple values
     ## (for different species). We will take the maximum value as the canopy height
     heightc <- unlist(
@@ -706,6 +735,7 @@ parse_ameriflux <- function(bif, bifvarinfo, site_code) {
 
             Country = get_bif("COUNTRY"),
             MeasurementHeight = height,
+            SoilMeasurementHeight = soil_heights,
 
             Source = get_bif("NETWORK"),
             Reference = get_bif("DOI_CITATION"),
@@ -782,6 +812,17 @@ parse_tern <- function(bif, bifvarinfo, site_code) {
                )
     )
 
+    ## Soil temp may exist independently of soil moisture. Assume bifvarinfo
+    ## only available with the FLUXNET2015 FULLSET datasets
+    dataset_vars <- get_varnames('FLUXNET2015', 'FULLSET', FALSE)
+    soilt <- dataset_vars$soilt
+
+    soil_heights <- instrument_height_string(bifvarinfo, soilt)
+    if (length(soil_heights) == 0) {
+        soilm <- dataset_vars$soilm
+        soil_heights <- instrument_height_string(bifvarinfo, soilm)
+    }
+
     ## Canopy/vegetation height is not always present. There may be multiple values
     ## (for different species). We will take the maximum value as the canopy height
     heightc <- unlist(
@@ -829,6 +870,7 @@ parse_tern <- function(bif, bifvarinfo, site_code) {
 
             Country = country,
             MeasurementHeight = height,
+            SoilMeasurementHeight = soil_heights,
 
             Source = "TERN",
             Reference = get_bif("DOI_CITATION"),
@@ -926,6 +968,17 @@ parse_icos <- function(bif, bifvarinfo, site_code) {
         )
     }
 
+    ## Soil temp may exist independently of soil moisture. Assume bifvarinfo
+    ## only available with the FLUXNET2015 FULLSET datasets
+    dataset_vars <- get_varnames('FLUXNET2015', 'FULLSET', FALSE)
+    soilt <- dataset_vars$soilt
+
+    soil_heights <- instrument_height_string(bifvarinfo, soilt)
+    if (length(soil_heights) == 0) {
+        soilm <- dataset_vars$soilm
+        soil_heights <- instrument_height_string(bifvarinfo, soilm)
+    }
+
     list(
         site = list(
             Fullname = get_bif("SITE_NAME"),
@@ -946,6 +999,7 @@ parse_icos <- function(bif, bifvarinfo, site_code) {
             Country = get_bif("COUNTRY"), # SAEON doesn't have
 
             MeasurementHeight = height,
+            SoilMeasurementHeight = soil_heights,
 
             Source = get_bif("NETWORK"),
             Reference = get_bif("DOI_CITATION"),

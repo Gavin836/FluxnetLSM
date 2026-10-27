@@ -12,6 +12,7 @@
 #' @param total_missing percentage missing and gap filled
 #' @param total_gapfilled percentage missing and gap filled
 #' @param qcInfo qc flag information
+#' @param qc_name qc filename info
 #' @param arg_info processing information
 #' @param var_ind variable indices?
 #' @param varnames original varnames corresponding to the dataset
@@ -32,6 +33,7 @@ CreateFluxNetcdfFile = function(
     flux_varname, cf_name,           # Original Fluxnet variable names and CF_compliant names
     total_missing, total_gapfilled,  # Percentage missing and gap-filled
     qcInfo,                          # QC flag values
+    qc_name,                         # Name of qc flag in original dataset
     arg_info,                        # Processing information
     var_ind,                         # Indices to extract variables to be written
     varnames,                        # Original FLUXNET names corresponding to dataset
@@ -128,25 +130,26 @@ CreateFluxNetcdfFile = function(
 
 
     # EXCEPTION VARIABLES ##############################################
-    ## Soil moisture will have 2 difference dimensions (1,1,1) vs (1,1,2)
-    ## depending on where there exists a secondary observation per timestep
-    ## Determine from var_defs which is the case and write the dimensions
-    ## and values appropriately
-    soil_moist_entry <- find_soil_variables(varnames$soilm, td$len, datain)
-    soil_temp_entry <- find_soil_variables(varnames$soilt, td$len, datain)
+    ## Soil observations may have 0-6 dimensions eg. (1,1,1) vs (1,1,6)
+    ## Compute dimensions based on var_defs and the input csv 'datain'
+    soil_moist_entry <- find_soil_variables(varnames$soilm, qc_name, td$len, datain)
+    soil_temp_entry <- find_soil_variables(varnames$soilt, qc_name, td$len, datain)
 
     moist_len <- length(soil_moist_entry$vars)
     temp_len <- length(soil_temp_entry$vars)
 
     soil_vars = c()
     ## Create appropriate netcdf dim and vars for soil vars
+    ## If available, assume that the observation will have the same dimensions.
     if (moist_len > 0 | temp_len > 0) {
+        num_sensors <- max(moist_len, temp_len)
         soil_dim <- ncdf4::ncdim_def(
                                name = "soil",
-                               vals = seq_len(moist_len),
+                               vals = seq_len(num_sensors),
                                units = ""
                            )
 
+        ## Soil moisture variables
         if (moist_len > 0) {
             soil_idx <- which(datain$vars %in% soil_moist_entry$vars)
             idx <- soil_idx[1]
@@ -156,8 +159,21 @@ CreateFluxNetcdfFile = function(
                                          missval=Nc_MissingVal,
                                          longname=datain$attributes[idx,2])
             soil_vars[['moist']] <- soilm_var
+
+            if (!is.null(soil_moist_entry$val_qc)) {
+                soil_idx <- which(datain$vars %in% soil_moist_entry$vars_qc)
+                idx <- soil_idx[1]
+                soilm_qc <- ncdf4::ncvar_def(name=datain$out_vars[idx],
+                                             units=datain$units$target_units[idx],
+                                             dim=list(xd,yd,soil_dim,td),
+                                             missval=Nc_MissingVal,
+                                             longname=datain$attributes[idx,2])
+
+                soil_vars[['moist_qc']] <- soilm_qc
+            }
         }
 
+        ## Soil temperature variables
         if (temp_len > 0) {
             soil_idx <- which(datain$vars %in% soil_temp_entry$vars)
             idx <- soil_idx[1]
@@ -167,6 +183,18 @@ CreateFluxNetcdfFile = function(
                                          missval=Nc_MissingVal,
                                          longname=datain$attributes[idx,2])
             soil_vars[['temp']] <- soilt_var
+
+            if (!is.null(soil_temp_entry$val_qc)) {
+                soil_idx <- which(datain$vars %in% soil_temp_entry$vars_qc)
+                idx <- soil_idx[1]
+                soilt_qc <- ncdf4::ncvar_def(name=datain$out_vars[idx],
+                                             units=datain$units$target_units[idx],
+                                             dim=list(xd,yd,soil_dim,td),
+                                             missval=Nc_MissingVal,
+                                             longname=datain$attributes[idx,2])
+
+                soil_vars[['temp_qc']] <- soilt_qc
+            }
         }
     }
 
@@ -327,11 +355,25 @@ CreateFluxNetcdfFile = function(
                                                      vals=datain$data[,var_ind[x]]))
     ## Manually add soil measurements
     if(any(!is.na(soil_moist_entry$val))) {
-      ncdf4::ncvar_put(ncid, varid = soil_vars[['moist']], vals = soil_moist_entry$val)}
+        ncdf4::ncvar_put(ncid, varid = soil_vars[['moist']], vals = soil_moist_entry$val)}
+        ncdf4::ncatt_put(ncid, soil_vars[['moist']],attname='Measurement_depth',
+              attval=as.character(siteInfo$SoilMeasurementHeight))
+    if(any(!is.na(soil_moist_entry$val_qc))) {
+        ncdf4::ncvar_put(ncid, varid = soil_vars[['moist_qc']], vals = soil_moist_entry$val_qc)}
     if(any(!is.na(soil_temp_entry$val))) {
-      ncdf4::ncvar_put(ncid, varid = soil_vars[['temp']], vals = soil_temp_entry$val)}
+        ncdf4::ncvar_put(ncid, varid = soil_vars[['temp']], vals = soil_temp_entry$val)}
+        ncdf4::ncatt_put(ncid, soil_vars[['temp']],attname='Measurement_depth',
+              attval=as.character(siteInfo$SoilMeasurementHeight))
+    if(any(!is.na(soil_temp_entry$val_qc))) {
+        ncdf4::ncvar_put(ncid, varid = soil_vars[['temp_qc']], vals = soil_temp_entry$val_qc)}
     if(any(!is.na(radT_val))) {
-      ncdf4::ncvar_put(ncid, varid = soil_vars[['radT']], vals = radT_val)}
+        ncdf4::ncatt_put(ncid,varid = soil_vars[['radT']],
+                         attname = "source",
+                         attval  = paste(
+                             "From LWup, using the Stefan-Boltzmann equation with a fixed",
+                             "emissivity of 0.978"))
+        ncdf4::ncvar_put(ncid, varid = soil_vars[['radT']], vals = radT_val)
+    }
 
     # Add original Fluxnet variable name to file
     lapply(1:length(var_defs), function(x) ncdf4::ncatt_put(nc=ncid, varid=var_defs[[x]],
@@ -930,44 +972,76 @@ add_processing_info <- function(ncid, arg_info, datain, cat){
 #' @return
 #' @export
 #'
-find_soil_variables <- function(target_vars, time_len, datain) {
+find_soil_variables <- function(target_vars, qc_name, time_len, datain) {
     available_soil_vars <- intersect(target_vars, datain$vars)
-    n_soil <- length(available_soil_vars)
 
-    if (n_soil > 0) {
-        empty_vars <- c()
-        for (var in available_soil_vars) {
-            idx <- which(datain$vars == var)
-            data_col <- datain$data[,idx]
-
-            if (all(is.na(data_col))) {
-                empty_vars <- append(empty_vars, var)
-            }
-        }
-
-        ## if column is empty ignore variable
-        available_soil_vars <- setdiff(available_soil_vars, empty_vars)
-        n_soil <- length(available_soil_vars)
-
-        if (n_soil == 0) {
-            return(list())
-        }
-
-        soil_vals <- array(
-            Nc_MissingVal,
-            dim = c(1, 1, n_soil, time_len)
-        )
-
-        count <- 1
-        for (var in available_soil_vars) {
-            soil_idx <- which(datain$vars %in% var)
-            idx <- soil_idx[1]
-            soil_vals[1,1, count,] <- datain$data[,idx]
-            count <- count + 1
-        }
-
-        list(vars = available_soil_vars, val = soil_vals)
+    if (!length(available_soil_vars)) {
+        return(list())
     }
+
+    # Select the first matching column for each soil variable
+    soil_idx <- match(available_soil_vars, datain$vars)
+    soil_data <- datain$data[, soil_idx, drop = FALSE]
+
+    # Filter out indices containing no data
+    is_missing <- function(x) {
+        is.na(x) | x == Nc_MissingVal
+    }
+    has_soil_data <- colSums(!is_missing(soil_data)) > 0
+
+    if (!any(has_soil_data)) {
+        return(list())
+    }
+
+    available_soil_vars <- available_soil_vars[has_soil_data]
+    soil_data <- soil_data[, has_soil_data, drop = FALSE]
+
+    n_soil <- length(available_soil_vars)
+    soil_vals <- array(
+        as.vector(t(soil_data)),
+        dim = c(1L, 1L, n_soil, time_len)
+    )
+
+    result <- list(
+        vars = available_soil_vars,
+        val = soil_vals
+    )
+
+    # Find corresponding QC variables
+    qc_vars <- paste0(available_soil_vars, qc_name)
+    qc_idx <- match(qc_vars, datain$vars)
+
+    ## Populate with missing values, then fill available QC data
+    ## Create with same dim as soil_vals
+    qc_data <- matrix(
+        Nc_MissingVal,
+        time_len,
+        n_soil
+    )
+
+    has_qc_column <- !is.na(qc_idx)
+
+    if (any(has_qc_column)) {
+        qc_values <- datain$data[,qc_idx[has_qc_column], drop = FALSE]
+        qc_data[, has_qc_column] <- vapply(
+            seq_len(ncol(qc_values)),
+            function(i) unlist(qc_values[, i], use.names = FALSE),
+            numeric(nrow(qc_data))
+        )
+    }
+
+    # Only return QC if at least one QC column contains data
+    has_qc_data <- colSums(!is_missing(qc_data)) > 0
+
+    if (any(has_qc_data)) {
+        result$vars_qc <- qc_vars
+        result$val_qc <- array(
+            as.vector(t(qc_data)),
+            dim = c(1L, 1L, n_soil, time_len)
+        )
+    }
+
+    result
 }
 
 calculate_radT <- function(datain) {

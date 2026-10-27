@@ -666,15 +666,17 @@ convert_fluxnet_to_netcdf <- function(
     
     ###--- Create netcdf flux data file ---###
 
-    ## The soil_moisture/ soil_temp variables will be manually handled in the create fx
+    ## Avoid double processing of the soil_moisture/ soil_temperature variables
+    ## by removing indices from standard list. They will be manually
+    ## processed within the create function
     manual_flux_vars <- c(dataset_vars$soilm, dataset_vars$soilt)
+    manual_excl_vars <- c(
+        manual_flux_vars,
+        paste0(manual_flux_vars, qc_name)
+    )
     flux_ind <- lapply(flux_ind, function(x) {
-        x[!(DataFromText$vars[x] %in% manual_flux_vars)]
+        x[!(DataFromText$vars[x] %in% manual_excl_vars)]
     })
-    ## filter_flux_ind <- sapply(flux_ind, function(x) {
-    ##     if (DataFromText$vars[x] %in% manual_flux_vars) { NA } else { x }
-    ## })
-    ## flux_ind <- flux_ind[!is.na(filter_flux_ind)]
 
     # Limit Flux output vars, if necessary
     if (!is.na(conv_opts$limit_vars[1])) {
@@ -696,6 +698,7 @@ convert_fluxnet_to_netcdf <- function(
                          total_missing=gaps$total_missing[[k]][flux_limit_ind],
                          total_gapfilled=gaps$total_gapfilled[[k]][flux_limit_ind],
                          qcInfo=qc_flags$qc_info,
+                         qc_name=qc_name,
                          arg_info=arg_info,
                          var_ind=flux_limit_ind,
                          varnames=dataset_vars,

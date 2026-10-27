@@ -56,11 +56,34 @@ SW_BC_IN,W/m2,numeric,SWdownGround,W/m2,"Shortwave radiation, below canopy incom
 SW_BC_OUT,W/m2,numeric,SWupGround,W/m2,"Shortwave radiation, below canopy outgoing",upwelling_shortwave_flux_in_air,rsu,0,1360,NA,FALSE,Eval,NA,mean
 SWC,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
 SWC_F_MDS,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
+SWC_F_MDS_QC,-,numeric,SoilMoist_qc,-,Soil moisture quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
 SWC_F_MDS_1,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
+SWC_F_MDS_1_QC,-,numeric,SoilMoist_qc,-,Soil moisture quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
 SWC_F_MDS_2,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
+SWC_F_MDS_2_QC,-,numeric,SoilMoist_qc,-,Soil moisture quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+SWC_F_MDS_3,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
+SWC_F_MDS_3_QC,-,numeric,SoilMoist_qc,-,Soil moisture quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+SWC_F_MDS_4,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
+SWC_F_MDS_4_QC,-,numeric,SoilMoist_qc,-,Soil moisture quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+SWC_F_MDS_5,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
+SWC_F_MDS_5_QC,-,numeric,SoilMoist_qc,-,Soil moisture quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+SWC_F_MDS_6,%,numeric,SoilMoist,%,Soil water content (volumetric),volume_fraction_of_condensed_water_in_soil,mrsol,0,100,NA,FALSE,Eval,NA,mean
+SWC_F_MDS_6_QC,-,numeric,SoilMoist_qc,-,Soil moisture quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
 TS,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
 TS_F_MDS,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_F_MDS_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
 TS_F_MDS_1,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_F_MDS_1_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
 TS_F_MDS_2,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_F_MDS_2_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+TS_F_MDS_3,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_F_MDS_3_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+TS_F_MDS_4,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_F_MDS_4_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+TS_F_MDS_5,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_F_MDS_5_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
+TS_F_MDS_6,degC,numeric,SoilTemp,degC,Soil temperature,soil_temperature,tsl,-50,70,NA,FALSE,Eval,NA,mean
+TS_F_MDS_6_QC,-,numeric,SoilTemp_qc,-,Soil temperature quality control flag,NULL,NULL,0,5,NA,FALSE,Eval,NA,NA
 MO_LENGTH,m,numeric,MOlength,m,Monin-Obukhov length,NA,NA,NA,NA,NA,FALSE,Eval,NA,mean
 ZL,NA,numeric,MOzl,NA,Monin-Obukhov Stability parameter,NA,NA,-10,10,NA,FALSE,Eval,NA,mean

@@ -393,12 +393,12 @@ get_varnames <- function(datasetname, flx2015_version, add_psurf) {
                       c("WS_f"),
                       c("Ws"))
   ## soilm and soilt are used only with fluxnet datasets
-  soilm       <- list(c("SWC", "SWC_F_MDS", "SWC_F_MDS_1", "SWC_F_MDS_2"),
+  soilm       <- list(c("SWC", "SWC_F_MDS", "SWC_F_MDS_1", "SWC_F_MDS_2", "SWC_F_MDS_3", "SWC_F_MDS_4", "SWC_F_MDS_5", "SWC_F_MDS_6"),
                       c(),
                       c(),
                       c())
 
-  soilt       <- list(c("TS", "TS_F_MDS", "TS_F_MDS_1", "TS_F_MDS_2"),
+  soilt       <- list(c("TS", "TS_F_MDS", "TS_F_MDS_1", "TS_F_MDS_2", "TS_F_MDS_3", "TS_F_MDS_4", "TS_F_MDS_5", "TS_F_MDS_6"),
                       c(),
                       c(),
                       c())

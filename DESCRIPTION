@@ -1,6 +1,6 @@
 Package: FluxnetLSM
 Title: Quality Control and Data Conversion for 'FLUXNET' Data for Land Surface Modelling
-Version: 1.2
+Version: 1.3
 Authors@R: c(person(
                family = "Anna",
                given = "Ukkola",
