@@ -594,12 +594,11 @@ instrument_height_string <- function(csv, vars) {
                                  csv$VARIABLE == 'VAR_INFO_HEIGHT'
                              ]
 
-    format_str <- c()
-    if (length(instrument_heights) != 0) {
-        format_str <- paste(instrument_heights, collapse = ',')
+    if (length(instrument_heights) == 0L) {
+        return(NA_character_)
     }
 
-    return (format_str)
+    paste(instrument_heights, collapse = ",")
 }
 
 
@@ -974,7 +973,7 @@ parse_icos <- function(bif, bifvarinfo, site_code) {
     soilt <- dataset_vars$soilt
 
     soil_heights <- instrument_height_string(bifvarinfo, soilt)
-    if (length(soil_heights) == 0) {
+    if (is.na(soil_heights)) {
         soilm <- dataset_vars$soilm
         soil_heights <- instrument_height_string(bifvarinfo, soilm)
     }

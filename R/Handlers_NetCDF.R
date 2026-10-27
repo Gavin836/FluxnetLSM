@@ -355,15 +355,23 @@ CreateFluxNetcdfFile = function(
                                                      vals=datain$data[,var_ind[x]]))
     ## Manually add soil measurements
     if(any(!is.na(soil_moist_entry$val))) {
-        ncdf4::ncvar_put(ncid, varid = soil_vars[['moist']], vals = soil_moist_entry$val)}
-        ncdf4::ncatt_put(ncid, soil_vars[['moist']],attname='Measurement_depth',
-              attval=as.character(siteInfo$SoilMeasurementHeight))
+        ncdf4::ncvar_put(ncid, varid = soil_vars[['moist']], vals = soil_moist_entry$val)
+
+        if(!is.na(siteInfo$SoilMeasurementHeight)) {
+            ncdf4::ncatt_put(ncid, soil_vars[['moist']],attname='Measurement_depth',
+                             attval=as.character(siteInfo$SoilMeasurementHeight))
+        }
+    }
     if(any(!is.na(soil_moist_entry$val_qc))) {
         ncdf4::ncvar_put(ncid, varid = soil_vars[['moist_qc']], vals = soil_moist_entry$val_qc)}
     if(any(!is.na(soil_temp_entry$val))) {
-        ncdf4::ncvar_put(ncid, varid = soil_vars[['temp']], vals = soil_temp_entry$val)}
-        ncdf4::ncatt_put(ncid, soil_vars[['temp']],attname='Measurement_depth',
-              attval=as.character(siteInfo$SoilMeasurementHeight))
+        ncdf4::ncvar_put(ncid, varid = soil_vars[['temp']], vals = soil_temp_entry$val)
+
+        if(!is.na(siteInfo$SoilMeasurementHeight)) {
+            ncdf4::ncatt_put(ncid, soil_vars[['temp']],attname='Measurement_depth',
+                         attval=as.character(siteInfo$SoilMeasurementHeight))
+        }
+    }
     if(any(!is.na(soil_temp_entry$val_qc))) {
         ncdf4::ncvar_put(ncid, varid = soil_vars[['temp_qc']], vals = soil_temp_entry$val_qc)}
     if(any(!is.na(radT_val))) {
