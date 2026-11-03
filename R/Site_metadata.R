@@ -1056,7 +1056,7 @@ datahub_adapters <- list(
     )
 
 ## Main entry function to extract metadata from bif files. Delegate processing to specific adaptor
-get_site_metadata_bif <- function(site_code, meta_files, incl_processing = TRUE, bif_hub = NULL) {
+get_site_metadata_bif <- function(site_code, meta_files, bif_hub = NULL) {
     required <- c("bif", "bifvarinfo")
     if (is.list(meta_files) &&
         !all(required %in% names(meta_files))) {
@@ -1072,7 +1072,7 @@ get_site_metadata_bif <- function(site_code, meta_files, incl_processing = TRUE,
     if (is.null(bif) || is.null(bifvarinfo)) {
         return(list(
             out = character(),
-            warn= "meta data files do not exist"
+            warn = "metadata files do not exist"
         ))
     }
 
@@ -1098,15 +1098,7 @@ get_site_metadata_bif <- function(site_code, meta_files, incl_processing = TRUE,
         bifvarinfo = meta_files$bifvarinfo
     )
 
-    if (incl_processing) {
-        warnings <- ""
-        ## for (error in result$warnings) {
-        ##     warnings <- append_and_warn(error, warnings, call = FALSE)
-        ## }
-        return(list(out=result$site,warn=warnings))
-    } else {
-        return(result$site)
-    }
+    return(list(out=result$site))
 }
 
 ################################################
