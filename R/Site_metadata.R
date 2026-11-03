@@ -1041,6 +1041,7 @@ detect_bif_hub <- function(bif, bifvarinfo) {
 
     hub_map <- c(
         TERN = "TERN",
+        FLX = "TERN",
         EUDB_ICOS = "ICOS",
         AMP = "AMF"
     )
