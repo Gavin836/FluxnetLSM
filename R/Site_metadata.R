@@ -696,7 +696,7 @@ parse_ameriflux <- function(bif, bifvarinfo, site_code) {
     max_heightc <- if (length(heightc) == 0L || all(is.na(heightc))) {
                        NA_real_
                    } else {
-                       max(heightc, na.rm = TRUE)
+                       as.numeric(max(heightc, na.rm = TRUE))
                    }
 
     if (is.na(max_heightc)) {
@@ -948,7 +948,7 @@ parse_icos <- function(bif, bifvarinfo, site_code) {
     max_heightc <- if (length(heightc) == 0L || all(is.na(heightc))) {
                        NA_real_
                    } else {
-                       max(heightc, na.rm = TRUE)
+                       as.numeric(max(heightc, na.rm = TRUE))
                    }
 
     if (is.na(max_heightc)) {
