@@ -111,7 +111,7 @@ update_metadata <- function(metadata, new_metadata, overwrite=TRUE) {
         if (!is.na(new_metadata[[n]])) {  # Don't overwrite with empty data
             if (n %in% names(metadata) && !is.na(metadata[[n]])) { # Old data already exists, check
                 different <- FALSE
-                if (!is.numeric(metadata[[n]])) {
+                if (!is.numeric(new_metadata[[n]])) {
                     if (new_metadata[[n]] != metadata[[n]]) { # non-numeric and different
                         different <- TRUE
                     }
@@ -725,8 +725,8 @@ parse_ameriflux <- function(bif, bifvarinfo, site_code) {
             IGBP_vegetation_short = get_bif("IGBP"),
             IGBP_vegetation_long = get_bif("IGBP_COMMENT"),
             VegetationDescription = get_bif("IGBP_COMMENT"),
-            CanopyHeight = max_heightc,
-            Vegetation_height = max_heightc,
+            CanopyHeight = as.numeric(max_heightc),
+            Vegetation_height = as.numeric(max_heightc),
 
             Description = get_bif("SITE_DESC"),
             Disturbance = get_bif("DOM_DIST_MGMT"),
