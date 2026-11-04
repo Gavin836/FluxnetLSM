@@ -1099,7 +1099,7 @@ get_site_metadata_bif <- function(site_code, meta_files, bif_hub = NULL) {
         bifvarinfo = meta_files$bifvarinfo
     )
 
-    return(list(out=result$site))
+    return(list(out=result$site, warn=""))
 }
 
 ################################################
