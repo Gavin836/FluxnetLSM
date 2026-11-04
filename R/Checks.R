@@ -266,13 +266,13 @@ CheckDataGaps <- function(datain, qc_flags, missing_met, missing_flux,
       message("Removing ", year, " due to too many missing values.")
 
       if(length(met_fail_ind) > 0) {
-        met_var <- datain$vars[met_fail_ind]
+        met_var <- datain$vars[all_met_ind[met_fail_ind]]
         met_pct <- miss[met_fail_ind]
         message("MET_VARS:", paste(met_var, met_pct, sep="|", collapse=","), "\n");
       }
 
       if(length(flux_fail_ind) > 0 && all(miss[preferred_ind] > missing_flux)) {
-        flux_var <- datain$vars[flux_fail_ind]
+        flux_var <- datain$vars[preferred_ind[flux_fail_ind]]
         flux_pct <- miss[flux_fail_ind]
         message("FLUX_VARS:", paste(flux_var, flux_pct, sep="|", collapse=","), "\n");
       }
@@ -595,5 +595,3 @@ InitialChecks <- function(opts, era_file){
   }
   
 }
-
-
